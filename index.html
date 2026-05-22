@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>사진 URL 도장 찍기</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+    background: #f5f4f0;
+    color: #1a1a18;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 2rem;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  header p {
+    font-size: 14px;
+    color: #888780;
+    margin-top: 4px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    border: 0.5px solid #d3d1c7;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #5f5e5a;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  label {
+    font-size: 13px;
+    color: #5f5e5a;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 0.5px solid #d3d1c7;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    background: #faf9f6;
+    color: #1a1a18;
+  }
+
+  input[type="text"]:focus {
+    border-color: #888780;
+    background: #fff;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: #d3d1c7;
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #1a1a18;
+    cursor: pointer;
+  }
+
+  .range-val {
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 38px;
+    text-align: right;
+    color: #1a1a18;
+  }
+
+  .color-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+
+  .color-btn, .style-btn {
+    padding: 7px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1.5px solid #d3d1c7;
+    transition: border-color 0.1s;
+    font-weight: 500;
+  }
+
+  .color-btn.active { border-color: #1a1a18; border-width: 2px; }
+  .color-btn[data-color="white"] { background: #fff; color: #333; }
+  .color-btn[data-color="black"] { background: #111; color: #fff; border-color: #111; }
+  .color-btn[data-color="yellow"] { background: #FFE000; color: #333; border-color: #cbb800; }
+
+  #drop-zone {
+    border: 1.5px dashed #b4b2a9;
+    border-radius: 12px;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  #drop-zone:hover, #drop-zone.over {
+    background: #f5f4f0;
+    border-color: #888780;
+  }
+
+  #drop-zone .icon {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 10px;
+    color: #b4b2a9;
+  }
+
+  #drop-zone p { font-size: 14px; color: #5f5e5a; }
+  #drop-zone small { font-size: 12px; color: #b4b2a9; margin-top: 4px; display: block; }
+
+  #preview-section { display: none; }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .preview-item {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f5f4f0;
+  }
+
+  .preview-item canvas { width: 100%; display: block; }
+
+  .preview-item .dl-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 9px;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s;
+  }
+
+  .preview-item .dl-btn:hover { background: rgba(0,0,0,0.8); }
+
+  .action-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    padding: 10px 22px;
+    background: #1a1a18;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-primary:hover { opacity: 0.8; }
+
+  .btn-secondary {
+    padding: 10px 18px;
+    background: transparent;
+    color: #1a1a18;
+    border: 0.5px solid #b4b2a9;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .btn-secondary:hover { background: #f5f4f0; }
+
+  .count-label {
+    font-size: 13px;
+    color: #888780;
+    margin-left: auto;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📸 사진 URL 도장 찍기</h1>
+    <p>사진 우측 하단에 블로그 URL을 자동으로 넣어드려요</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">설정</div>
+
+    <div class="field">
+      <label for="url-input">블로그 URL</label>
+      <input type="text" id="url-input" placeholder="예: blog.naver.com/myname" />
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>글자 크기</label>
+        <div class="range-row">
+          <input type="range" id="font-size" min="12" max="72" value="24" step="1" />
+          <span class="range-val" id="font-size-out">24px</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>투명도</label>
+        <div class="range-row">
+          <input type="range" id="opacity" min="10" max="100" value="70" step="1" />
+          <span class="range-val" id="opacity-out">70%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>여백</label>
+        <div class="range-row">
+          <input type="range" id="margin" min="4" max="60" value="14" step="1" />
+          <span class="range-val" id="margin-out">14px</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>스타일</label>
+        <div class="color-group">
+          <button class="style-btn active" data-style="bar">바 스타일</button>
+          <button class="style-btn" data-style="plain">텍스트만</button>
+        </div>
+      </div>
+      <div class="field" id="color-field" style="display:none;">
+        <label>글자색</label>
+        <div class="color-group">
+          <button class="color-btn active" data-color="white">흰색</button>
+          <button class="color-btn" data-color="black">검정</button>
+          <button class="color-btn" data-color="yellow">노랑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="drop-zone">
+      <span class="icon">🖼️</span>
+      <p>사진을 끌어다 놓거나 클릭해서 선택</p>
+      <small>JPG, PNG 지원 · 여러 장 동시 가능</small>
+      <input type="file" id="file-input" accept="image/jpeg,image/png" multiple style="display:none;" />
+    </div>
+  </div>
+
+  <div id="preview-section">
+    <div class="card">
+      <div class="card-title">미리보기</div>
+      <div class="preview-grid" id="preview-grid"></div>
+      <div class="action-bar">
+        <button class="btn-primary" id="download-all">⬇ 전체 다운로드</button>
+        <button class="btn-secondary" id="reset-btn">초기화</button>
+        <span class="count-label" id="count-label"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const urlInput = document.getElementById('url-input');
+const fontSizeRange = document.getElementById('font-size');
+const fontSizeOut = document.getElementById('font-size-out');
+const opacityRange = document.getElementById('opacity');
+const opacityOut = document.getElementById('opacity-out');
+const marginRange = document.getElementById('margin');
+const marginOut = document.getElementById('margin-out');
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const previewSection = document.getElementById('preview-section');
+const previewGrid = document.getElementById('preview-grid');
+const downloadAllBtn = document.getElementById('download-all');
+const resetBtn = document.getElementById('reset-btn');
+const countLabel = document.getElementById('count-label');
+
+let selectedColor = 'white';
+let selectedStyle = 'bar';
+let images = [];
+
+const colorMap = { white: 'rgba(255,255,255,', black: 'rgba(0,0,0,', yellow: 'rgba(255,224,0,' };
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedColor = btn.dataset.color;
+    renderAll();
+  });
+});
+
+document.querySelectorAll('.style-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedStyle = btn.dataset.style;
+    document.getElementById('color-field').style.display = selectedStyle === 'plain' ? '' : 'none';
+    renderAll();
+  });
+});
+
+fontSizeRange.addEventListener('input', () => { fontSizeOut.textContent = fontSizeRange.value + 'px'; renderAll(); });
+opacityRange.addEventListener('input', () => { opacityOut.textContent = opacityRange.value + '%'; renderAll(); });
+marginRange.addEventListener('input', () => { marginOut.textContent = marginRange.value + 'px'; renderAll(); });
+urlInput.addEventListener('input', renderAll);
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+function handleFiles(files) {
+  const arr = Array.from(files).filter(f => f.type === 'image/jpeg' || f.type === 'image/png');
+  if (!arr.length) return;
+  images = [];
+  previewGrid.innerHTML = '';
+  let loaded = 0;
+  arr.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        images[i] = { img, name: file.name, type: file.type };
+        loaded++;
+        if (loaded === arr.length) { images = images.filter(Boolean); showPreviews(); }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function drawWatermark(img) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const url = urlInput.value.trim() || 'your-blog-url';
+  const fontSize = parseInt(fontSizeRange.value);
+  const opacity = parseInt(opacityRange.value) / 100;
+  const margin = parseInt(marginRange.value);
+  if (selectedStyle === 'bar') {
+    const barHeight = fontSize + margin * 2;
+    ctx.font = fontSize + 'px Arial, sans-serif';
+    const textWidth = ctx.measureText(url).width;
+    const barWidth = textWidth + margin * 2;
+    const barX = canvas.width - barWidth;
+    const y = canvas.height - barHeight;
+    ctx.fillStyle = 'rgba(0,0,0,' + opacity + ')';
+    ctx.fillRect(barX, y, barWidth, barHeight);
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(url, canvas.width - margin, y + barHeight / 2);
+  } else {
+    ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
+    ctx.fillStyle = colorMap[selectedColor] + opacity + ')';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(url, canvas.width - margin, canvas.height - margin);
+  }
+  return canvas;
+}
+
+function showPreviews() {
+  previewSection.style.display = 'block';
+  countLabel.textContent = images.length + '장 불러옴';
+  renderAll();
+}
+
+function renderAll() {
+  previewGrid.innerHTML = '';
+  images.forEach((item) => {
+    const canvas = drawWatermark(item.img);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'preview-item';
+    canvas.style.cssText = 'width: 100%; display: block;';
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'dl-btn';
+    dlBtn.title = '이 사진 다운로드';
+    dlBtn.textContent = '⬇';
+    dlBtn.addEventListener('click', () => downloadCanvas(canvas, item.name, item.type));
+    wrapper.appendChild(canvas);
+    wrapper.appendChild(dlBtn);
+    previewGrid.appendChild(wrapper);
+  });
+}
+
+function downloadCanvas(canvas, name, type) {
+  const ext = type === 'image/png' ? 'png' : 'jpg';
+  const mimeType = type === 'image/png' ? 'image/png' : 'image/jpeg';
+  const base = name.replace(/\.[^.]+$/, '');
+  const link = document.createElement('a');
+  link.download = base + '_url.' + ext;
+  link.href = canvas.toDataURL(mimeType, 0.95);
+  link.click();
+}
+
+downloadAllBtn.addEventListener('click', () => {
+  images.forEach((item, i) => {
+    const canvas = drawWatermark(item.img);
+    setTimeout(() => downloadCanvas(canvas, item.name, item.type), i * 200);
+  });
+});
+
+resetBtn.addEventListener('click', () => {
+  images = [];
+  previewGrid.innerHTML = '';
+  previewSection.style.display = 'none';
+  fileInput.value = '';
+});
+</script>
+</body>
+</html>
